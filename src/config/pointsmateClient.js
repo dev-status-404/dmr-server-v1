@@ -1,0 +1,152 @@
+import axios from "axios";
+import createError from "http-errors";
+import config from "./env.js";
+
+const getAccountId = (accountId) => accountId || config.pointsMate.accountId;
+const normalizeAmount = ({ amount, amountSats }) => {
+  const value = amount ?? amountSats;
+  return value === undefined || value === null ? undefined : Number(value);
+};
+const getAuthorizationHeader = () => {
+  const apiKey = String(config.pointsMate.apiKey || "").trim();
+
+  if (!apiKey) return "";
+  if (/^Bearer\s+/i.test(apiKey)) return apiKey;
+
+  return `Bearer ${apiKey}`;
+};
+
+const client = axios.create({
+  baseURL: (config.pointsMate.baseUrl || "").replace(/\/+$/, ""),
+  timeout: config.pointsMate.timeoutMs,
+  headers: {
+    Authorization: getAuthorizationHeader(),
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  },
+});
+
+const request = async ({ method, url, data, params }) => {
+  if (!config.pointsMate.enabled) {
+    throw createError(503, "pointsmate-disabled");
+  }
+
+  if (!config.pointsMate.baseUrl || !config.pointsMate.apiKey) {
+    throw createError(500, "pointsmate-config-missing");
+  }
+
+  try {
+    const response = await client.request({ method, url, data, params });
+    return response.data;
+  } catch (error) {
+    const providerMessage =
+      error?.response?.data?.message ||
+      error?.message ||
+      "pointsmate-request-failed";
+    throw createError(502, `pointsmate-request-failed: ${providerMessage}`);
+  }
+};
+
+const createReceive = async ({
+  accountId,
+  type,
+  amount,
+  amountSats,
+  memo,
+  referenceId,
+  webhookUrl,
+}) =>
+  request({
+    method: "POST",
+    url: "/pmext/api/v1/wallet/receive",
+    data: {
+      accountId: getAccountId(accountId),
+      type,
+      amount: amount,
+      memo,
+      referenceId,
+      ...(webhookUrl || config.pointsMate.receiveWebhookUrl
+        ? { webhookUrl: webhookUrl || config.pointsMate.receiveWebhookUrl }
+        : {}),
+    },
+  });
+
+const sendFunds = async ({
+  accountId,
+  address,
+  amount,
+  amountSats,
+  memo,
+  referenceId,
+}) =>
+  request({
+    method: "POST",
+    url: "/pmext/api/v1/wallet/send",
+    data: {
+      accountId: getAccountId(accountId),
+      address,
+      amount:amount,
+      memo,
+      referenceId,
+    },
+  });
+
+const createSendLink = async ({ accountId }) =>
+  request({
+    method: "POST",
+    url: "/pmext/api/v1/wallet/send-link",
+    data: { accountId: getAccountId(accountId) },
+  });
+
+const generatePointsCode = async ({
+  accountId,
+  amount,
+  amountSats,
+  referenceId,
+  memo,
+}) =>
+  request({
+    method: "POST",
+    url: "/pmext/api/v1/wallet/points-code/generate",
+    data: {
+      accountId: getAccountId(accountId),
+      amount:amount,
+      referenceId,
+      memo,
+    },
+  });
+
+const redeemPointsCode = async ({ accountId, pointsCode, memo, referenceId }) =>
+  request({
+    method: "POST",
+    url: "/pmext/api/v1/wallet/points-code/redeem",
+    data: {
+      accountId: getAccountId(accountId),
+      pointsCode,
+      memo,
+      referenceId,
+    },
+  });
+
+const getTransaction = async ({ accountId, transactionId }) =>
+  request({
+    method: "GET",
+    url: `/pmext/api/v1/wallet/transaction/${getAccountId(accountId)}/${transactionId}`,
+  });
+
+const getBalance = async ({ accountId }) =>
+  request({
+    method: "GET",
+    url: "/pmext/api/v1/wallet/balance",
+    params: { accountId: getAccountId(accountId) },
+  });
+
+export const pointsmateClient = {
+  createReceive,
+  sendFunds,
+  createSendLink,
+  generatePointsCode,
+  redeemPointsCode,
+  getTransaction,
+  getBalance,
+};
