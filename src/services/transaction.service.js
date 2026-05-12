@@ -27,9 +27,11 @@ const formatWalletTransaction = (tx) => {
     magicLink: meta.magicLink || null,
     magic_link_expires_at: meta.magicLinkExpiresAt || null,
     magicLinkExpiresAt: meta.magicLinkExpiresAt || null,
-    amount: meta.amount || plain.amount || null,
+    // Prefer USD amount so the UI always displays dollars
+    amount: meta.amountUsd || meta.amount || plain.amount || null,
     amount_usd: meta.amountUsd || null,
     amountUsd: meta.amountUsd || null,
+    amountSats: meta.amountSats || null,
     provider_transaction_id:
       meta.providerTransactionId || meta.providerResponse?.transactionId || null,
     providerTransactionId:
@@ -60,7 +62,8 @@ const resolveUserContext = async (userId) => {
 };
 
 const listTransactions = async ({ userId, type, status, page = 1, limit = 20 }) => {
-  const where = { user_id: userId };
+  const where = {};
+  if (userId) where.user_id = userId;
 
   if (type) where.type = String(type).toLowerCase();
   if (status) where.status = String(status).toLowerCase();

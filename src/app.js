@@ -40,8 +40,7 @@ const allowedOrigins = [
   "https://ucsweeps.com",
   "https://www.ucsweeps.com",
   "https://www.monacogameroom.com",
-  "https://monacogameroom.com",
-  "https://dmr-client-v1.vercel.app"
+  "https://monacogameroom.com"
 ];
 
 const corsOptions = {

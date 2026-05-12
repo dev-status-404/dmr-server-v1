@@ -89,5 +89,4 @@ const dbConnection = async () => {
 };
 
 export { sequelize };
-
 export default dbConnection;
