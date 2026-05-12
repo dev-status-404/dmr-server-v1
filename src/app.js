@@ -40,7 +40,9 @@ const allowedOrigins = [
   "https://ucsweeps.com",
   "https://www.ucsweeps.com",
   "https://www.monacogameroom.com",
-  "https://monacogameroom.com"
+  "https://monacogameroom.com",
+  "https://diamondhighrollers.com",
+  "https://www.diamondhighrollers.com",
 ];
 
 const corsOptions = {
